@@ -10,8 +10,9 @@ This Python script utilizes the Scapy library to perform a basic network securit
 - Scapy library
 - Paramiko library
 
-**Install the required libraries using:
-**pip install scapy paramiko
+**Install the required libraries using:**
+
+pip install scapy paramiko
 
 #################
 
