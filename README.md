@@ -34,5 +34,6 @@ Make sure to have permission before scanning or attempting any security-related 
 The script uses a basic password list for the SSH bruteforce attack. Consider using a more extensive and secure password list for a real-world scenario. For example RockYou wordlist would be highly reccommended.
 
 **Disclaimer**
+
 ⚠️ This script is intended for educational and ethical use only. Do not use it for any malicious purposes. The author is not responsible for any misuse or damage caused by this script.
 
