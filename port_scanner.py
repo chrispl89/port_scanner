@@ -13,7 +13,7 @@ from pathlib import Path
 NVD_API_URL = "https://services.nvd.nist.gov/rest/json/cves/1.0"
 CVE_CACHE_FILE = "cve_cache.json"
 CVE_CACHE_EXPIRE_DAYS = 7
-SHODAN_API_KEY = "boYedPn8iDWi6GDSO6h2kz72VLt6bZ3S"
+SHODAN_API_KEY = "set_your_shodan_api_key_here"
 
 
 class CVECache:
