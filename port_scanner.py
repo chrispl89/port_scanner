@@ -7,7 +7,7 @@ import shodan
 import time
 import ssl
 import re
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from pathlib import Path
 
 NVD_API_URL = "https://services.nvd.nist.gov/rest/json/cves/1.0"
@@ -133,7 +133,7 @@ async def read_banner(reader, timeout=2, chunk_size=1024) -> str:
     return b"".join(banner_chunks).decode(errors="ignore").strip()
 
 
-def identify_service(banner: str) -> (str, str):
+def identify_service(banner: str) -> Tuple[str, str]:
     """
     Identify the service and its version from the banner string.
 
@@ -168,7 +168,7 @@ def identify_service(banner: str) -> (str, str):
     return service, version
 
 
-async def scan_port(target: str, port: int, timeout: float) -> (int, bool, str, float):
+async def scan_port(target: str, port: int, timeout: float) -> Tuple[int, bool, str, float]:
     """
     Scan a single port on the target and retrieve the banner.
 
