@@ -144,27 +144,24 @@ def identify_service(banner: str) -> Tuple[str, str]:
         tuple: (service_name, version_info)
     """
     service, version = "unknown", ""
-    apache_match = re.search(r'(Apache/[\d\.]+)(\s*\([^)]+\))?', banner, re.IGNORECASE)
-    if apache_match:
-        version = apache_match.group(1)
-        if apache_match.group(2):
-            version += apache_match.group(2)
-        return "apache", version
-    nginx_match = re.search(r'nginx/([\d\.]+)', banner, re.IGNORECASE)
-    if nginx_match:
-        return "nginx", f"nginx/{nginx_match.group(1)}"
-    if "HTTP/" in banner:
-        server_match = re.search(r'Server:\s*([^\r\n]+)', banner, re.IGNORECASE)
-        if server_match:
-            server = server_match.group(1).strip()
-            return "http", server
-        return "http", "Unknown HTTP Server"
-    ssh_match = re.search(r'SSH-(\d+\.\d+)-([^\s]+)', banner, re.IGNORECASE)
+    
+    # Improved HTTP Server detection
+    server_match = re.search(r'(Apache|nginx|IIS)/([\d\.]+)', banner, re.IGNORECASE)
+    if server_match:
+        service = server_match.group(1).lower()
+        version = f"{server_match.group(1)}/{server_match.group(2)}"
+        return service, version
+    
+    # SSH detection
+    ssh_match = re.search(r'SSH-(\d+\.\d+)[-_]([^\s]+)', banner)
     if ssh_match:
-        return "ssh", f"{ssh_match.group(1)} ({ssh_match.group(2)})"
-    bind_match = re.search(r'BIND\s+([\d\.]+)', banner, re.IGNORECASE)
-    if bind_match:
-        return "bind", f"BIND {bind_match.group(1)}"
+        version = f"{ssh_match.group(1)} ({ssh_match.group(2)})"
+        return "ssh", version
+    
+    # Generic HTTP detection
+    if "Server:" in banner:
+        return "http", banner.split("Server:")[-1].split("|")[0].strip()
+    
     return service, version
 
 
@@ -197,22 +194,51 @@ async def scan_port(target: str, port: int, timeout: float) -> Tuple[int, bool, 
                 writer.write(b"SSH-2.0-Client\r\n")
                 await writer.drain()
                 banner = await read_banner(reader, timeout=5)
+            
             elif port in {80, 443, 8080}:
+                # Send HTTP request
                 req = f"GET / HTTP/1.1\r\nHost: {target}\r\nUser-Agent: Mozilla/5.0\r\nConnection: close\r\n\r\n"
                 writer.write(req.encode())
                 await writer.drain()
-                banner = await read_banner(reader, timeout=5)
+                
+                # Read only headers
+                try:
+                    headers = await asyncio.wait_for(reader.readuntil(b"\r\n\r\n"), timeout=5)
+                    headers_str = headers.decode(errors="ignore")
+                    
+                    # Extract server information
+                    server_info = "Unknown Server"
+                    server_match = re.search(r'Server:\s*(.+?)\r\n', headers_str, re.IGNORECASE)
+                    if server_match:
+                        server_info = server_match.group(1)
+                    
+                    # Extract additional headers
+                    powered_by = ""
+                    powered_match = re.search(r'X-Powered-By:\s*(.+?)\r\n', headers_str, re.IGNORECASE)
+                    if powered_match:
+                        powered_by = f" | Powered by: {powered_match.group(1)}"
+                    
+                    banner = f"{server_info}{powered_by}"
+                
+                except asyncio.IncompleteReadError:
+                    banner = "Incomplete HTTP response"
+            
             else:
                 await asyncio.sleep(0.3)
                 banner = await read_banner(reader, timeout=3)
+        
         except Exception as e:
-            banner = f"[Error: {type(e).__name__}: {e}]"
+            banner = f"[Error: {type(e).__name__}: {str(e)}]"
+        
         finally:
             writer.close()
             await writer.wait_closed()
-        return port, True, banner, time.time() - start_time
+        
+        return port, True, banner.strip(), time.time() - start_time
+    
     except Exception as e:
         return port, False, str(e), time.time() - start_time
+
 
 
 async def main_scan(target: str, ports: List[int], timeout: float, max_concurrency: int, shodan_client=None) -> Dict:
